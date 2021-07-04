@@ -36,14 +36,39 @@ export function DataProvider({ children }) {
             PostedAt: Timestamp.now(),
             PostedBy: currentUser.displayName,
             PosterId: currentUser.uid,
-            Likes: {}
+            Likes: []
+        })
+    }
+
+    const likePost = (postData, userId) => {
+
+        if (!postData.Likes.includes(userId)) {
+            const newLikes = [...postData.Likes, userId]
+
+            return db.collection('posts').doc(postData.id).update({
+                Likes: newLikes
+            })
+        }
+    }
+
+    const unlikePost = (postData, userId) => {
+        const newLikes = postData.Likes.filter(likedUserId => {
+            if (likedUserId !== userId) {
+                return likedUserId
+            }
+        })
+
+        return db.collection('posts').doc(postData.id).update({
+            Likes: newLikes
         })
     }
 
     const value = {
         subscribeToPosts,
         subscribeToPost,
-        createPost
+        createPost,
+        likePost,
+        unlikePost
     }
 
     return (

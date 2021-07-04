@@ -20,7 +20,6 @@ export default function Dashboard() {
         const unsubscribe = subscribeToPosts(postCollection => {
             const newPosts = []
             postCollection.forEach(doc => {
-                console.log(doc.id)
                 const data = doc.data()
                 newPosts.push({...data, id: doc.id})
             })
