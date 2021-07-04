@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Spinner, Button } from 'react-bootstrap'
+import { Card, Spinner, Button, Form } from 'react-bootstrap'
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome"
 import { faHeart } from '@fortawesome/free-solid-svg-icons'
 import { faHeart as farHeart} from '@fortawesome/free-regular-svg-icons'
@@ -7,24 +7,43 @@ import {Link, useParams, useHistory} from 'react-router-dom'
 import {useData} from '../contexts/DataContext'
 import {useAuth} from '../contexts/AuthContext'
 
+import Comment from './Comment'
+
 export default function FullPost() {
     const {postid} = useParams()
     const [postData, setPostData] = useState(null)
+    const [commentsData, setCommentsData] = useState([])
+    const [showCommentForm, setShowCommentForm] = useState(false)
+    const [commentFormText, setCommentFormText] =  useState("")
 
-    const {subscribeToPost, likePost, unlikePost} = useData()
+    const {subscribeToPost, likePost, unlikePost, createComment} = useData()
     const {currentUser} = useAuth()
     const history = useHistory()
 
     useEffect(() => {
-        const unsubscribe = subscribeToPost(doc => {
+        const {unsubscribeFromPost, unsubscribeFromPostComments} = subscribeToPost(doc => {
             const fetchedPostData = doc.data()
             setPostData({
                 ...fetchedPostData,
                 id: postid
             })
-        },postid)
+        }, 
+        commentCollection => {
+            const newComments = []
+            commentCollection.forEach(doc => {
+                const data = doc.data()
+                newComments.push(data)
+            })
 
-        return unsubscribe
+            setCommentsData(newComments)
+
+            console.log(commentsData)
+        }, postid)
+
+        return () => {
+            unsubscribeFromPost()
+            unsubscribeFromPostComments()
+        }
     }, [])
 
     if (!postData) {
@@ -46,6 +65,14 @@ export default function FullPost() {
         } else {
             unlikePost(postData, currentUser.uid)
         }
+    }
+
+    const handleSubmitComment = e => {
+        e.preventDefault()
+
+        createComment(commentFormText, postid, currentUser)
+
+        setShowCommentForm(false)
     }
 
 
@@ -76,10 +103,26 @@ export default function FullPost() {
                     </div>
                 </Card.Header>
                 <Card.Body>
-                    
                     <Card.Text>{postData.Body}</Card.Text>
                 </Card.Body>            
             </Card>
+            <div className="d-flex justify-content-between align-items-center mb-2 mt-4" style={{padding: "0px 10px"}}>
+                <p style={{marginBottom: "0px"}}>Comments</p>
+                {!showCommentForm && <Button variant="success" onClick={_ => setShowCommentForm(true)}>Add Comment</Button>}
+            </div>
+            {showCommentForm && (
+                <Form className="mb-3" style={{padding: "0px 10px"}} onSubmit={handleSubmitComment}>
+                    <Form.Group className="d-flex">
+                        <Form.Control as="textarea" placeholder="Type your comment here..." value={commentFormText} onChange={e => setCommentFormText(e.target.value)}>
+
+                        </Form.Control>
+                        <Button type="submit" style={{marginLeft: "10px"}}>Comment</Button>
+                    </Form.Group>
+                </Form>
+            )}
+            <div style={{padding: "0 10px"}}>
+                {commentsData.map(comment => <Comment commentData={comment} />)}
+            </div>
         </div>
     )
 }

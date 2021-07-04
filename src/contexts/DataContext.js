@@ -14,11 +14,21 @@ export function DataProvider({ children }) {
         })
     }
 
-    const subscribeToPost = (handleUpdate, postId) => {
-        return db.collection('posts').doc(postId)
+    const subscribeToPost = (handlePostUpdate, handleCommentUpdate, postId) => {
+        const unsubscribeFromPost = db.collection('posts').doc(postId)
         .onSnapshot(doc => {
-            handleUpdate(doc)
+            handlePostUpdate(doc)
         })
+
+        const unsubscribeFromPostComments = db.collection('posts').doc(postId).collection("comments")
+        .onSnapshot(commentCollection => {
+            handleCommentUpdate(commentCollection)
+        })
+
+        return {
+            unsubscribeFromPost,
+            unsubscribeFromPostComments
+        }
     }
 
     const createPost = (title, body, currentUser) => {
@@ -37,6 +47,24 @@ export function DataProvider({ children }) {
             PostedBy: currentUser.displayName,
             PosterId: currentUser.uid,
             Likes: []
+        })
+    }
+
+    const createComment = (comment, postId, currentUser) => {
+        if (!comment || !currentUser || !postId) {
+            return
+        }
+
+        if (comment.split(" ").join("") == "") {
+            return
+        }
+
+        db.collection("posts").doc(postId).collection("comments").add({
+            Comment: comment,
+            Likes: [],
+            PostedAt: Timestamp.now(),
+            PostedBy: currentUser.displayName,
+            PosterId: currentUser.uid
         })
     }
 
@@ -68,7 +96,8 @@ export function DataProvider({ children }) {
         subscribeToPost,
         createPost,
         likePost,
-        unlikePost
+        unlikePost,
+        createComment
     }
 
     return (
